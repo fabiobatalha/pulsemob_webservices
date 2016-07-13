@@ -9,6 +9,8 @@ import re
 import django
 import logging
 
+logger = logging.getLogger(__name__)
+
 django.setup()
 
 control_chars = ''.join(map(unichr, range(0, 32) + range(127, 160)))
@@ -24,7 +26,7 @@ def remove_control_chars(s):
 
 def get_solr_args_from_article(document, indexed_date):
     article = Article(document)
-    logging.info("Producing data for %s-%s" % (article.collection_acronym, article.publisher_id))
+    logger.info("Producing data for %s-%s" % (article.collection_acronym, article.publisher_id))
 
     original_title = article.original_title()
     if original_title is not None:

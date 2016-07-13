@@ -10,6 +10,8 @@ import psycopg2
 from xylose.scielodocument import Journal
 from django.utils import timezone
 
+logger = logging.getLogger(__name__)
+
 
 def do_request(url, params):
     while True:
@@ -17,12 +19,12 @@ def do_request(url, params):
             response = requests.get(url, params=params).json()
             break
         except Exception as ex:
-            logging.error("An error has occurred trying to do an url request. " \
+            logger.error("An error has occurred trying to do an url request. " \
                           "The used url and parameters and the traceback are below:")
-            logging.error(url)
-            logging.error(params)
-            logging.exception(ex)
-            logging.error("Sleeping for 1 minute to try again...")
+            logger.error(url)
+            logger.error(params)
+            logger.exception(ex)
+            logger.error("Sleeping for 1 minute to try again...")
             time.sleep(60)
 
     return response
@@ -38,7 +40,7 @@ def extract_data_from_article_webservice_to_file(article_meta_uri, output_filepa
         while True:
             if page_limit is not None and page >= page_limit:
                 break
-            logging.info('Extracting articles from webservice (page {0})...'.format(page))
+            logger.info('Extracting articles from webservice (page {0})...'.format(page))
             params = {'offset': page * 1000}
             identifiers = do_request(
                 '{0}/article/identifiers'.format(article_meta_uri),
@@ -57,7 +59,7 @@ def extract_data_from_article_webservice_to_file(article_meta_uri, output_filepa
 
 
 def extract_data_from_journal_webservice_to_file(article_meta_uri, output_filepath):
-    logging.info('Extracting journals from webservice...')
+    logger.info('Extracting journals from webservice...')
     with open(output_filepath, "w") as text_file:
         documents = do_request(
             '{0}/{1}'.format(article_meta_uri, 'journal'),
@@ -70,7 +72,7 @@ def extract_data_from_journal_webservice_to_file(article_meta_uri, output_filepa
 
 
 def store_and_process_data_from_file(curs, input_filepath, data_table, temp_table):
-    logging.info("Processing data...")
+    logger.info("Processing data...")
     curs.execute("TRUNCATE {0}".format(temp_table))
     curs.copy_from(open(r'{0}'.format(input_filepath), 'r'), temp_table, sep=',')
     curs.execute("COPY {0} FROM '{1}' USING DELIMITERS ',' CSV".format(temp_table, input_filepath))
@@ -84,20 +86,20 @@ def store_and_process_data_from_file(curs, input_filepath, data_table, temp_tabl
 
 
 def delete_entries(curs, table_name, delete_entry_method):
-    logging.info("Deleting entries...")
+    logger.info("Deleting entries...")
     curs.execute("SELECT id FROM {0} WHERE action = 'D'".format(table_name))
     rows = curs.fetchall()
     for row in rows:
         delete_entry_method(row[0])
 
-    logging.info("{0} entries deleted.".format(len(rows)))
+    logger.info("{0} entries deleted.".format(len(rows)))
 
 
 def add_update_entries(curs, table_name, article_meta_uri, endpoint, add_update_entry_method, action, indexed_date):
     if action == "I":
-        logging.info("Adding entries...")
+        logger.info("Adding entries...")
     elif action == "U":
-        logging.info("Updating entries...")
+        logger.info("Updating entries...")
 
     if endpoint == 'article':
         key = 'code'
@@ -131,18 +133,18 @@ def add_update_entries(curs, table_name, article_meta_uri, endpoint, add_update_
         if doc_ret is not None:
             add_update_entry_method(identifier, doc_ret, action, indexed_date)
         else:
-            logging.info("{0} '{1}' not found.".format(endpoint, code))
+            logger.info("{0} '{1}' not found.".format(endpoint, code))
 
         if r != 0 and r % 100 == 0:
             if action == "I":
-                logging.info("{0} entries added... continuing...".format(r))
+                logger.info("{0} entries added... continuing...".format(r))
             elif action == "U":
-                logging.info("{0} entries updated... continuing...".format(r))
+                logger.info("{0} entries updated... continuing...".format(r))
 
     if action == "I":
-        logging.info("{0} entries added.".format(len(rows)))
+        logger.info("{0} entries added.".format(len(rows)))
     elif action == "U":
-        logging.info("{0} entries updated.".format(len(rows)))
+        logger.info("{0} entries updated.".format(len(rows)))
 
 
 def switch_and_clean_tables(curs, data_table_name, temp_table):
@@ -181,4 +183,4 @@ def harvest(article_meta_uri,
             add_update_entries(curs, temp_table, article_meta_uri, endpoint, add_update_entry, "U", indexed_date)
             switch_and_clean_tables(curs, data_table_name, temp_table)
         conn.commit()
-    logging.info("{0} - Process finished.".format(time.ctime()))
+    logger.info("{0} - Process finished.".format(time.ctime()))
