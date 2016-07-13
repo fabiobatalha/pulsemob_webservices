@@ -106,7 +106,6 @@ def main():
     parser.add_argument(
         '--logging_file',
         '-o',
-        default=config.get("harvest", "logfile") or "harvester.log",
         help='Full path to the log file'
     )
 
@@ -120,7 +119,9 @@ def main():
 
     args = parser.parse_args()
 
-    _config_logging(args.logging_level, args.logging_file)
+    logfile = args.logging_file or config.get("harvest", "logfile")
+
+    _config_logging(args.logging_level, logfile)
     logger.info('Loading data for the Pulsemob SciELO APP')
 
     run()
