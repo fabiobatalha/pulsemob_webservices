@@ -16,6 +16,9 @@ logger = logging.getLogger(__name__)
 config = ConfigParser.ConfigParser()
 config.read('harvest.cfg')
 
+solr_uri = config.get("harvest", "solr_uri")
+solr_conn = solr.SolrConnection(solr_uri)
+
 
 def _config_logging(logging_level='INFO', logging_file=None):
 
@@ -46,7 +49,7 @@ def _config_logging(logging_level='INFO', logging_file=None):
 
 def delete_article_entry(code):
 
-    logging.info("Deleting: %s" % code)
+    logger.info("Deleting: %s" % code)
 
     solr_conn.delete(code=code)
 
@@ -58,9 +61,9 @@ def add_update_article_entry(code, document, action, indexed_date):
     try:
         args = solr_util.get_solr_args_from_article(document, indexed_date)
     except AttributeError as ex:
-        logging.exception(ex)
+        logger.exception(ex)
     except ValueError as ex:
-        logging.exception(ex)
+        logger.exception(ex)
 
     if not args:
         return
@@ -70,20 +73,16 @@ def add_update_article_entry(code, document, action, indexed_date):
             solr_conn.add(**args)
             break
         except Exception as ex:
-            logging.error(
+            logger.error(
                 "An error has occurred trying to access Solr. Arguments passed to Solr and the traceback are below:")
-            logging.error(args)
-            logging.exception(ex)
-            logging.error("Sleeping for 1 minute to try again...")
-            time.sleep(60)
+            logger.error(args)
+            logger.exception(ex)
+            logger.error("Sleeping for 1 minute to try again...")
+            time.sleep(2)
 
 
 def run():
     FORMAT = '%(asctime)-15s %(message)s'
-    logging.basicConfig(level=logging.DEBUG, format=FORMAT)
-
-    solr_uri = config.get("harvest", "solr_uri")
-    solr_conn = solr.SolrConnection(solr_uri)
 
     harvest(
         config.get("harvest", "article_meta_uri"),
