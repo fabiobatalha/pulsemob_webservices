@@ -10,8 +10,7 @@ import psycopg2
 from xylose.scielodocument import Journal
 from django.utils import timezone
 
-logger = logging.getLogger(__name__)
-
+logger = logging.getLogger('harvest')
 
 def do_request(url, params):
     while True:

@@ -9,7 +9,7 @@ import re
 import django
 import logging
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('harvest')
 
 django.setup()
 

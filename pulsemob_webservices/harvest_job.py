@@ -11,7 +11,7 @@ from harvest import harvest
 import solr_util
 import time
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('harvest')
 
 config = ConfigParser.ConfigParser()
 config.read('harvest.cfg')
@@ -19,32 +19,33 @@ config.read('harvest.cfg')
 solr_uri = config.get("harvest", "solr_uri")
 solr_conn = solr.SolrConnection(solr_uri)
 
-
-def _config_logging(logging_level='INFO', logging_file=None):
-
-    allowed_levels = {
-        'DEBUG': logging.DEBUG,
-        'INFO': logging.INFO,
-        'WARNING': logging.WARNING,
-        'ERROR': logging.ERROR,
-        'CRITICAL': logging.CRITICAL
+LOGGING = {
+    'version': 1,
+    'formatters': {
+        'simple': {
+            'format': '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        }
+    },
+    'handlers': {
+        'console': {
+            'level': 'NOTSET',
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple',
+        }
+    },
+    'loggers': {
+        'harvest': {
+            'handlers': ['console'],
+            'level': 'DEBUG'
+        }
     }
+}
 
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
-    logger.setLevel(allowed_levels.get(logging_level, 'INFO'))
+def _config_logging(logging_level='INFO'):
 
-    if logging_file:
-        hl = logging.FileHandler(logging_file, mode='a')
-    else:
-        hl = logging.StreamHandler()
-
-    hl.setFormatter(formatter)
-    hl.setLevel(allowed_levels.get(logging_level, 'INFO'))
-
-    logger.addHandler(hl)
-
-    return logger
+    LOGGING['loggers']['harvest']['level'] = logging_level
+    logging.config.dictConfig(LOGGING)
 
 
 def delete_article_entry(code):
@@ -104,12 +105,6 @@ def main():
     )
 
     parser.add_argument(
-        '--logging_file',
-        '-o',
-        help='Full path to the log file'
-    )
-
-    parser.add_argument(
         '--logging_level',
         '-l',
         default=config.get("harvest", "loglevel") or "DEBUG",
@@ -119,9 +114,7 @@ def main():
 
     args = parser.parse_args()
 
-    logfile = args.logging_file or config.get("harvest", "logfile")
-
-    _config_logging(args.logging_level, logfile)
+    _config_logging(args.logging_level)
     logger.info('Loading data for the Pulsemob SciELO APP')
 
     run()
